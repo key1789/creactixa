@@ -1,5 +1,5 @@
-import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { can } from '../features/auth/permissions'
 import { useAuth } from '../features/auth/useAuth'
 import { ClientDetailView } from '../features/clients/ClientDetailView'
@@ -48,54 +48,9 @@ export function ClientsPage() {
   )
   const [error, setError] = useState<string | null>(null)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false)
   const [drawerMode, setDrawerMode] = useState<DrawerMode>('view')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const drawerRef = useRef<HTMLElement | null>(null)
-  const previousFocusRef = useRef<HTMLElement | null>(null)
-
-  useEffect(() => {
-    if (!drawerOpen) return
-    previousFocusRef.current = document.activeElement as HTMLElement | null
-
-    function handleKeydown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        setDrawerOpen(false)
-        return
-      }
-
-      if (event.key !== 'Tab') return
-      const container = drawerRef.current
-      if (!container) return
-      const focusable = getFocusableElements(container)
-      if (!focusable.length) return
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      const current = document.activeElement
-
-      if (event.shiftKey && current === first) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && current === last) {
-        event.preventDefault()
-        first.focus()
-      }
-    }
-
-    window.requestAnimationFrame(() => {
-      const container = drawerRef.current
-      if (!container) return
-      const firstFocusable = getFocusableElements(container)[0]
-      firstFocusable?.focus()
-    })
-
-    window.addEventListener('keydown', handleKeydown)
-    return () => {
-      window.removeEventListener('keydown', handleKeydown)
-      previousFocusRef.current?.focus()
-    }
-  }, [drawerOpen])
 
   useEffect(() => {
     let active = true
@@ -140,7 +95,7 @@ export function ClientsPage() {
   function openClientDrawer(client: Client) {
     setSelectedClient(client)
     setDrawerMode('view')
-    setDrawerOpen(true)
+    setMobileInspectorOpen(true)
   }
 
   function openCreateDrawer() {
@@ -150,7 +105,7 @@ export function ClientsPage() {
     }
     setSelectedClient(null)
     setDrawerMode('edit')
-    setDrawerOpen(true)
+    setMobileInspectorOpen(true)
   }
 
   async function handleFormSubmit(payload: ClientInsert) {
@@ -265,8 +220,8 @@ export function ClientsPage() {
   }
 
   return (
-    <section className="space-y-6" aria-busy={loading} aria-labelledby="clients-page-title">
-      <div className="app-card flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
+    <section className="space-y-4" aria-busy={loading} aria-labelledby="clients-page-title">
+      <div className="workspace-header app-card flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 id="clients-page-title" className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
             Brand Foundation
@@ -371,147 +326,192 @@ export function ClientsPage() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredClients.map((client) => (
-            <motion.button
-              key={client.id}
-              whileHover={{ y: -4, scale: 1.01 }}
-              transition={{ duration: 0.18 }}
-              onClick={() => openClientDrawer(client)}
-              className="rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm dark:border-slate-800 dark:bg-slate-900"
-            >
-              <div className="flex items-start justify-between">
-                <ClientLogo client={client} />
-                <span
-                  className={`rounded-full px-2 py-1 text-xs font-medium ${
-                    client.is_archived
-                      ? 'bg-amber-100 text-amber-700'
-                      : 'bg-emerald-100 text-emerald-700'
-                  }`}
+        <div className="workspace-grid">
+          <div className="workspace-canvas app-card p-3 md:p-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {filteredClients.map((client) => (
+                <motion.button
+                  key={client.id}
+                  whileHover={{ y: -4, scale: 1.01 }}
+                  transition={{ duration: 0.18 }}
+                  onClick={() => openClientDrawer(client)}
+                  className="rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 >
-                  {client.is_archived ? 'Arsip' : 'Aktif'}
-                </span>
-              </div>
-              <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-slate-100">{client.name}</h3>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{client.industry || '-'}</p>
-            </motion.button>
-          ))}
+                  <div className="flex items-start justify-between">
+                    <ClientLogo client={client} />
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs font-medium ${
+                        client.is_archived
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-emerald-100 text-emerald-700'
+                      }`}
+                    >
+                      {client.is_archived ? 'Arsip' : 'Aktif'}
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-slate-100">{client.name}</h3>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{client.industry || '-'}</p>
+                </motion.button>
+              ))}
 
-          {!filteredClients.length && (
-            <div className="app-empty-state col-span-full rounded-lg">
-              Tidak ada data klien untuk filter saat ini.
+              {!filteredClients.length && (
+                <div className="app-empty-state col-span-full rounded-lg">
+                  Tidak ada data klien untuk filter saat ini.
+                </div>
+              )}
             </div>
-          )}
+          </div>
+          <aside className="workspace-inspector hidden xl:block">
+            <ClientInspectorPanel
+              client={selectedClient}
+              mode={drawerMode}
+              canEdit={canEditClient}
+              canArchive={canArchiveClient}
+              isSubmitting={isSubmitting}
+              onModeChange={setDrawerMode}
+              onArchiveToggle={handleArchiveToggle}
+              onSubmit={handleFormSubmit}
+            />
+          </aside>
         </div>
       )}
 
-      <AnimatePresence>
-        {drawerOpen && (
-          <>
-            <motion.div
-              className="fixed inset-0 z-40 bg-black/30"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setDrawerOpen(false)}
+      {mobileInspectorOpen && (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-slate-950/45 xl:hidden"
+            aria-label="Tutup panel detail client"
+            onClick={() => setMobileInspectorOpen(false)}
+          />
+          <div className="fixed inset-x-0 bottom-0 z-50 max-h-[78vh] rounded-t-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900 xl:hidden">
+            <ClientInspectorPanel
+              client={selectedClient}
+              mode={drawerMode}
+              canEdit={canEditClient}
+              canArchive={canArchiveClient}
+              isSubmitting={isSubmitting}
+              onModeChange={setDrawerMode}
+              onArchiveToggle={handleArchiveToggle}
+              onSubmit={handleFormSubmit}
+              onUploadLogo={uploadClientLogo}
+              footerAction={
+                <button onClick={() => setMobileInspectorOpen(false)} className="app-button-secondary mt-3 w-full">
+                  Tutup Panel
+                </button>
+              }
             />
-            <motion.aside
-              ref={drawerRef}
-              className="fixed right-0 top-0 z-50 h-full w-full max-w-2xl overflow-y-auto border-l border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900"
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'tween', duration: 0.25 }}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="client-drawer-title"
-              aria-describedby="client-drawer-description"
-              tabIndex={-1}
-            >
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h2 id="client-drawer-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                    {selectedClient ? selectedClient.name : 'Tambah Klien'}
-                  </h2>
-                  <p id="client-drawer-description" className="text-sm text-slate-500 dark:text-slate-400">
-                    Client drawer
-                  </p>
-                </div>
-                <button
-                  onClick={() => setDrawerOpen(false)}
-                  className="app-button-secondary px-3 py-1"
-                >
-                  Tutup
-                </button>
-              </div>
-
-              <div className="mb-4 flex gap-2">
-                <button
-                  disabled={!selectedClient}
-                  onClick={() => setDrawerMode('view')}
-                  aria-pressed={drawerMode === 'view'}
-                  className={`rounded-md px-3 py-2 text-sm font-medium ${
-                    drawerMode === 'view'
-                      ? 'bg-slate-900 text-white dark:bg-brand-500'
-                      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                  }`}
-                >
-                  View
-                </button>
-                {canEditClient && (
-                  <button
-                    onClick={() => setDrawerMode('edit')}
-                    aria-pressed={drawerMode === 'edit'}
-                    className={`rounded-md px-3 py-2 text-sm font-medium ${
-                      drawerMode === 'edit'
-                        ? 'bg-slate-900 text-white dark:bg-brand-500'
-                        : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                    }`}
-                  >
-                    Edit
-                  </button>
-                )}
-                {selectedClient && canArchiveClient && (
-                  <button
-                    onClick={handleArchiveToggle}
-                    disabled={isSubmitting}
-                    className="ml-auto rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                  >
-                    {selectedClient.is_archived ? 'Restore Client' : 'Archive Client'}
-                  </button>
-                )}
-              </div>
-
-              {drawerMode === 'view' && selectedClient ? (
-                <ClientDetailView client={selectedClient} />
-              ) : (
-                <ClientEditForm
-                  key={selectedClient?.id ?? 'new-client'}
-                  client={selectedClient}
-                  isSubmitting={isSubmitting}
-                  onSubmit={handleFormSubmit}
-                  onUploadLogo={uploadClientLogo}
-                />
-              )}
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+          </div>
+        </>
+      )}
     </section>
   )
 }
 
-function getFocusableElements(container: HTMLElement): HTMLElement[] {
-  const selectors = [
-    'a[href]',
-    'button:not([disabled])',
-    'textarea:not([disabled])',
-    'input:not([disabled])',
-    'select:not([disabled])',
-    '[tabindex]:not([tabindex="-1"])',
-  ].join(',')
+function ClientInspectorPanel({
+  client,
+  mode,
+  canEdit,
+  canArchive,
+  isSubmitting,
+  onModeChange,
+  onArchiveToggle,
+  onSubmit,
+  onUploadLogo,
+  footerAction,
+}: {
+  client: Client | null
+  mode: DrawerMode
+  canEdit: boolean
+  canArchive: boolean
+  isSubmitting: boolean
+  onModeChange: (mode: DrawerMode) => void
+  onArchiveToggle: () => Promise<void>
+  onSubmit: (payload: ClientInsert) => Promise<void>
+  onUploadLogo?: (file: File) => Promise<string>
+  footerAction?: ReactNode
+}) {
+  if (!client && mode === 'edit') {
+    return (
+      <div className="app-card h-full overflow-y-auto p-4">
+        <div className="mb-4">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Tambah Client</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Buat data client baru dari panel kanan.</p>
+        </div>
+        <ClientEditForm
+          key="new-client-inspector"
+          client={null}
+          isSubmitting={isSubmitting}
+          onSubmit={onSubmit}
+          onUploadLogo={onUploadLogo ?? uploadClientLogo}
+        />
+        {footerAction}
+      </div>
+    )
+  }
 
-  return Array.from(container.querySelectorAll<HTMLElement>(selectors)).filter(
-    (el) => !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true'
+  if (!client) {
+    return (
+      <div className="app-card h-full p-4">
+        <div className="app-empty-state flex h-full items-center justify-center py-12">
+          Pilih client untuk membuka inspector.
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="app-card h-full overflow-y-auto p-4">
+      <div className="mb-4">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{client.name}</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{client.industry ?? '-'}</p>
+      </div>
+      <div className="mb-4 flex gap-2">
+        <button
+          onClick={() => onModeChange('view')}
+          className={`rounded-md px-3 py-2 text-sm font-medium ${
+            mode === 'view'
+              ? 'bg-slate-900 text-white dark:bg-brand-500'
+              : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+          }`}
+        >
+          View
+        </button>
+        {canEdit && (
+          <button
+            onClick={() => onModeChange('edit')}
+            className={`rounded-md px-3 py-2 text-sm font-medium ${
+              mode === 'edit'
+                ? 'bg-slate-900 text-white dark:bg-brand-500'
+                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+            }`}
+          >
+            Edit
+          </button>
+        )}
+        {canArchive && (
+          <button
+            onClick={() => void onArchiveToggle()}
+            disabled={isSubmitting}
+            className="ml-auto rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            {client.is_archived ? 'Restore Client' : 'Archive Client'}
+          </button>
+        )}
+      </div>
+
+      {mode === 'view' ? (
+        <ClientDetailView client={client} />
+      ) : (
+        <ClientEditForm
+          key={client.id}
+          client={client}
+          isSubmitting={isSubmitting}
+          onSubmit={onSubmit}
+          onUploadLogo={onUploadLogo ?? uploadClientLogo}
+        />
+      )}
+      {footerAction}
+    </div>
   )
 }

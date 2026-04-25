@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../features/auth/useAuth'
 import { getActivityLogs, type ActivityLogItem } from '../../services/activityLogService'
 
@@ -14,9 +13,14 @@ function toNotificationText(log: ActivityLogItem): string {
     .join(' ')
 }
 
-export function Topbar() {
-  const navigate = useNavigate()
-  const { user, signOut } = useAuth()
+interface TopbarProps {
+  onToggleNav: () => void
+  onToggleInspector: () => void
+  showInspectorToggle: boolean
+}
+
+export function Topbar({ onToggleNav, onToggleInspector, showInspectorToggle }: TopbarProps) {
+  const { user } = useAuth()
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState<ActivityLogItem[]>([])
   const [notificationsError, setNotificationsError] = useState<string | null>(null)
@@ -71,11 +75,6 @@ export function Topbar() {
     day: 'numeric',
   })
 
-  async function handleSignOut() {
-    await signOut()
-    navigate('/login', { replace: true })
-  }
-
   const notificationLastSeenKey = `CREACTIXA_NOTIF_LAST_SEEN_${user?.id ?? 'anonymous'}`
 
   function markAllAsRead() {
@@ -119,22 +118,48 @@ export function Topbar() {
   })()
 
   return (
-    <header className="border-b border-slate-200/80 bg-white/80 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 md:px-6 lg:px-8">
-      <div className="mx-auto flex w-full max-w-[1320px] flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">Selamat datang</p>
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">CREACTIXA Hub</h2>
-          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{user?.email ?? 'Belum ada user aktif'}</p>
+    <header className="border-b border-slate-200/80 bg-white/80 px-3 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 md:px-4 lg:px-6">
+      <div className="mx-auto flex w-full max-w-[1680px] items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2 md:gap-3">
+          <button
+            onClick={onToggleNav}
+            className="app-button-secondary px-2.5 py-1.5 md:hidden"
+            aria-label="Buka menu navigasi"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M4 7H20" />
+              <path d="M4 12H20" />
+              <path d="M4 17H20" />
+            </svg>
+          </button>
+
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-700 md:text-xs">Workspace</p>
+            <h2 className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100 md:text-base">
+              CREACTIXA Hub
+            </h2>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {showInspectorToggle && (
+            <button
+              onClick={onToggleInspector}
+              className="app-button-secondary px-3 py-1.5 md:hidden"
+              aria-label="Buka panel detail"
+            >
+              Detail
+            </button>
+          )}
           <div className="relative" ref={notificationsRef}>
             <button
               onClick={() => void toggleNotifications()}
-              className="app-button-secondary relative px-3 py-1.5"
+              className="app-button-secondary relative px-2.5 py-1.5 md:px-3"
               aria-label="Buka pusat notifikasi"
               aria-expanded={notificationsOpen}
             >
-              Notifikasi
+              <span className="hidden md:inline">Notifikasi</span>
+              <span className="md:hidden">Notif</span>
               {unreadCount > 0 && (
                 <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                   {unreadCount > 9 ? '9+' : unreadCount}
@@ -202,17 +227,14 @@ export function Topbar() {
           </button>
           <button
             onClick={toggleTheme}
-            className="app-button-secondary px-3 py-1.5"
+            className="app-button-secondary px-2.5 py-1.5 md:px-3"
             aria-label={isDark ? 'Ganti ke mode terang' : 'Ganti ke mode gelap'}
             aria-pressed={isDark}
           >
-            {isDark ? 'Terang' : 'Gelap'}
+            {isDark ? 'Light' : 'Dark'}
           </button>
-          <button onClick={() => void handleSignOut()} className="app-button-secondary px-3 py-1.5">
-            Keluar
-          </button>
-          <div className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 md:block">
-            {today}
+          <div className="hidden rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 xl:block">
+            {today} - {user?.email ?? 'Guest'}
           </div>
         </div>
       </div>

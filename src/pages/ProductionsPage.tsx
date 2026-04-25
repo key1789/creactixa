@@ -15,13 +15,15 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { can } from '../features/auth/permissions'
 import { useAuth } from '../features/auth/useAuth'
 import { ProductionCard } from '../features/productions/ProductionCard'
-import { ProductionDrawer } from '../features/productions/ProductionDrawer'
+import { ProductionDetailView } from '../features/productions/ProductionDetailView'
+import { ProductionEditForm } from '../features/productions/ProductionEditForm'
 import {
   PRODUCTION_STATUSES,
+  type ProductionTab,
   type Production,
   type ProductionStatus,
   type ProductionUpdate,
@@ -50,7 +52,9 @@ export function ProductionsPage() {
   const [error, setError] = useState<string | null>(null)
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const [selectedProduction, setSelectedProduction] = useState<Production | null>(null)
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false)
+  const [inspectorMode, setInspectorMode] = useState<'view' | 'edit'>('view')
+  const [inspectorTab, setInspectorTab] = useState<ProductionTab>('SCRIPT')
   const [isSavingDrawer, setIsSavingDrawer] = useState(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
@@ -90,6 +94,17 @@ export function ProductionsPage() {
   )
   const canEditProduction = can(user, 'productions.edit')
   const canDragProduction = can(user, 'productions.drag')
+  const hasInspector = Boolean(selectedProduction)
+
+  useEffect(() => {
+    function onToggleInspector() {
+      if (!selectedProduction) return
+      setMobileInspectorOpen((prev) => !prev)
+    }
+
+    window.addEventListener('workspace-toggle-inspector', onToggleInspector)
+    return () => window.removeEventListener('workspace-toggle-inspector', onToggleInspector)
+  }, [selectedProduction])
 
   function handleDragStart(event: DragStartEvent) {
     if (!canDragProduction) return
@@ -155,7 +170,9 @@ export function ProductionsPage() {
 
   function openDrawer(production: Production) {
     setSelectedProduction(production)
-    setDrawerOpen(true)
+    setInspectorMode('view')
+    setInspectorTab('SCRIPT')
+    setMobileInspectorOpen(true)
   }
 
   async function handleSaveDrawer(payload: ProductionUpdate) {
@@ -185,16 +202,32 @@ export function ProductionsPage() {
     }
   }
 
+  async function handleGenerateClientLink() {
+    if (!selectedProduction) return
+    const url = `${window.location.origin}/view/${selectedProduction.id}`
+    await navigator.clipboard.writeText(url)
+  }
+
   return (
-    <section className="space-y-4" aria-busy={loading} aria-labelledby="productions-page-title">
-      <div className="app-card p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Execution board</p>
-        <h1 id="productions-page-title" className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-          Production Content
-        </h1>
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          Drag-and-drop antar status produksi untuk menjaga ritme delivery.
-        </p>
+    <section className="space-y-3" aria-busy={loading} aria-labelledby="productions-page-title">
+      <div className="workspace-header app-card p-4 md:p-5">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Execution workspace</p>
+          <h1 id="productions-page-title" className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            Production Content
+          </h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Kelola board produksi dengan canvas + inspector seperti workflow studio.
+          </p>
+        </div>
+        {hasInspector && (
+          <button
+            onClick={() => setMobileInspectorOpen((prev) => !prev)}
+            className="app-button-secondary mt-3 px-3 py-1.5 md:hidden"
+          >
+            {mobileInspectorOpen ? 'Tutup Detail' : 'Buka Detail'}
+          </button>
+        )}
         {!canDragProduction && (
           <p className="mt-2 text-xs text-amber-600 dark:text-amber-300">
             Role Anda hanya dapat melihat board, tanpa drag-and-drop status.
@@ -220,47 +253,179 @@ export function ProductionsPage() {
           <span className="sr-only">Loading production board</span>
         </div>
       ) : (
-        <div className="overflow-x-auto pb-2">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCorners}
-            onDragStart={handleDragStart}
-            onDragEnd={(event) => void handleDragEnd(event)}
-          >
-            <div className="flex min-w-max gap-4">
-              {PRODUCTION_STATUSES.map((status) => (
-                <StatusColumn
-                  key={status}
-                  status={status}
-                  items={grouped[status] ?? []}
-                  onCardClick={openDrawer}
-                  canDrag={canDragProduction}
-                />
-              ))}
+        <div className="workspace-grid">
+          <div className="workspace-canvas app-card p-3 md:p-4">
+            <div className="overflow-x-auto pb-2">
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCorners}
+                onDragStart={handleDragStart}
+                onDragEnd={(event) => void handleDragEnd(event)}
+              >
+                <div className="flex min-w-max gap-4">
+                  {PRODUCTION_STATUSES.map((status) => (
+                    <StatusColumn
+                      key={status}
+                      status={status}
+                      items={grouped[status] ?? []}
+                      onCardClick={openDrawer}
+                      canDrag={canDragProduction}
+                    />
+                  ))}
+                </div>
+                {!productions.length && (
+                  <div className="app-empty-state mt-4 min-w-[380px]">
+                    Belum ada data produksi. Tambahkan ide yang di-approve untuk mulai mengisi board.
+                  </div>
+                )}
+                <DragOverlay>
+                  {activeDragItem ? (
+                    <ProductionCard production={activeDragItem} onClick={openDrawer} isOverlay />
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             </div>
-            {!productions.length && (
-              <div className="app-empty-state mt-4 min-w-[380px]">
-                Belum ada data produksi. Tambahkan ide yang di-approve untuk mulai mengisi board.
-              </div>
-            )}
-            <DragOverlay>
-              {activeDragItem ? (
-                <ProductionCard production={activeDragItem} onClick={openDrawer} isOverlay />
-              ) : null}
-            </DragOverlay>
-          </DndContext>
+          </div>
+
+          <aside className="workspace-inspector hidden xl:block">
+            <ProductionInspectorPanel
+              production={selectedProduction}
+              mode={inspectorMode}
+              tab={inspectorTab}
+              isSubmitting={isSavingDrawer || !canEditProduction}
+              onModeChange={setInspectorMode}
+              onTabChange={setInspectorTab}
+              onSave={handleSaveDrawer}
+              onGenerateClientLink={handleGenerateClientLink}
+            />
+          </aside>
         </div>
       )}
 
-      <ProductionDrawer
-        key={selectedProduction?.id ?? 'production-drawer'}
-        production={selectedProduction}
-        open={drawerOpen}
-        isSubmitting={isSavingDrawer || !canEditProduction}
-        onClose={() => setDrawerOpen(false)}
-        onSave={handleSaveDrawer}
-      />
+      {hasInspector && mobileInspectorOpen && (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-slate-950/45 xl:hidden"
+            aria-label="Tutup panel detail"
+            onClick={() => setMobileInspectorOpen(false)}
+          />
+          <div className="fixed inset-x-0 bottom-0 z-50 max-h-[78vh] rounded-t-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900 xl:hidden">
+            <ProductionInspectorPanel
+              production={selectedProduction}
+              mode={inspectorMode}
+              tab={inspectorTab}
+              isSubmitting={isSavingDrawer || !canEditProduction}
+              onModeChange={setInspectorMode}
+              onTabChange={setInspectorTab}
+              onSave={handleSaveDrawer}
+              onGenerateClientLink={handleGenerateClientLink}
+              footerAction={
+                <button
+                  onClick={() => setMobileInspectorOpen(false)}
+                  className="app-button-secondary mt-3 w-full px-3 py-1.5"
+                >
+                  Tutup Panel
+                </button>
+              }
+            />
+          </div>
+        </>
+      )}
     </section>
+  )
+}
+
+function ProductionInspectorPanel({
+  production,
+  mode,
+  tab,
+  isSubmitting,
+  onModeChange,
+  onTabChange,
+  onSave,
+  onGenerateClientLink,
+  footerAction,
+}: {
+  production: Production | null
+  mode: 'view' | 'edit'
+  tab: ProductionTab
+  isSubmitting: boolean
+  onModeChange: (mode: 'view' | 'edit') => void
+  onTabChange: (tab: ProductionTab) => void
+  onSave: (payload: ProductionUpdate) => Promise<void>
+  onGenerateClientLink: () => Promise<void>
+  footerAction?: ReactNode
+}) {
+  if (!production) {
+    return (
+      <div className="app-card h-full p-4">
+        <div className="app-empty-state flex h-full items-center justify-center py-12">
+          Pilih salah satu kartu produksi untuk membuka inspector.
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="app-card h-full overflow-y-auto p-4">
+      <div className="mb-4">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{production.title}</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{production.clients?.name ?? '-'}</p>
+      </div>
+
+      <div className="mb-3 flex gap-2">
+        <button
+          onClick={() => onModeChange('view')}
+          className={`rounded-md px-3 py-2 text-sm font-medium ${
+            mode === 'view'
+              ? 'bg-slate-900 text-white dark:bg-brand-500'
+              : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+          }`}
+        >
+          View
+        </button>
+        <button
+          onClick={() => onModeChange('edit')}
+          className={`rounded-md px-3 py-2 text-sm font-medium ${
+            mode === 'edit'
+              ? 'bg-slate-900 text-white dark:bg-brand-500'
+              : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+          }`}
+        >
+          Edit
+        </button>
+      </div>
+
+      <div className="mb-4 flex gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+        {(['SCRIPT', 'NEEDS', 'SCHEDULE'] as const).map((item) => (
+          <button
+            key={item}
+            onClick={() => onTabChange(item)}
+            className={`rounded-md px-3 py-2 text-sm font-medium ${
+              tab === item
+                ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
+                : 'text-slate-600 dark:text-slate-300'
+            }`}
+          >
+            {item}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'view' ? (
+        <ProductionDetailView production={production} activeTab={tab} onGenerateClientLink={onGenerateClientLink} />
+      ) : (
+        <ProductionEditForm
+          key={`${production.id}-${tab}`}
+          production={production}
+          activeTab={tab}
+          isSubmitting={isSubmitting}
+          onSubmit={onSave}
+        />
+      )}
+      {footerAction}
+    </div>
   )
 }
 

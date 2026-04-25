@@ -51,8 +51,8 @@ export function DashboardPage() {
   )
 
   return (
-    <section className="space-y-5">
-      <div className="app-card overflow-hidden p-6 md:p-7">
+    <section className="space-y-4">
+      <div className="workspace-header app-card overflow-hidden p-6 md:p-7">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Morning briefing</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">Editorial Control Center</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
@@ -67,13 +67,13 @@ export function DashboardPage() {
       )}
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-          <SkeletonBlock className="xl:col-span-3" />
-          <SkeletonBlock className="xl:col-span-5" />
-          <SkeletonBlock className="xl:col-span-4" />
+        <div className="workspace-grid">
+          <SkeletonBlock />
+          <SkeletonBlock className="hidden xl:block" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div className="workspace-grid">
+          <div className="workspace-canvas grid grid-cols-1 gap-4 xl:grid-cols-12">
           <section className="app-card space-y-3 p-4 xl:col-span-3">
             <h2 className="app-section-title">Quick Actions</h2>
             <Link
@@ -127,13 +127,27 @@ export function DashboardPage() {
               )}
             </div>
           </section>
+          </div>
+          <aside className="workspace-inspector hidden xl:block">
+            <div className="app-card h-full p-4">
+              <h2 className="app-section-title">Workspace Hints</h2>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                Gunakan Command Palette (`Ctrl/Cmd + K`) untuk navigasi cepat dan panel notifikasi untuk memantau aksi terbaru tim.
+              </p>
+              <div className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                <p>- Prioritaskan kartu dengan status INBOX dan REVISION.</p>
+                <p>- Gunakan Saved Views agar workflow berulang lebih cepat.</p>
+                <p>- Role-based access aktif pada aksi sensitif.</p>
+              </div>
+            </div>
+          </aside>
         </div>
       )}
     </section>
   )
 }
 
-function SkeletonBlock({ className }: { className: string }) {
+function SkeletonBlock({ className = '' }: { className?: string }) {
   return (
     <div className={`app-card p-4 ${className}`}>
       <div className="app-skeleton h-52 border-0" />

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ProductionDetailView } from '../features/productions/ProductionDetailView'
 import { ProductionDrawer } from '../features/productions/ProductionDrawer'
 import type { Production, ProductionUpdate } from '../features/productions/types'
 import { getProductions, updateProduction } from '../services/productionService'
@@ -57,9 +58,8 @@ export function CalendarPage() {
 
   const monthLabel = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
-  function openDrawer(production: Production) {
+  function selectProduction(production: Production) {
     setSelectedProduction(production)
-    setDrawerOpen(true)
   }
 
   async function handleSaveDrawer(payload: ProductionUpdate) {
@@ -164,69 +164,100 @@ export function CalendarPage() {
           <span className="sr-only">Loading production calendar</span>
         </div>
       ) : (
-        <div className="app-card p-4">
-          {!productions.length && (
-            <div className="app-empty-state mb-4 p-5">
-              Belum ada jadwal produksi. Isi `take_date` atau `post_date` di production board.
-            </div>
-          )}
-          <div className="grid grid-cols-7 gap-2">
-            {weekDays.map((day) => (
-              <div
-                key={day}
-                className="rounded-lg bg-slate-50 px-2 py-1 text-center text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-              >
-                {day}
+        <div className="workspace-grid">
+          <div className="workspace-canvas app-card p-4">
+            {!productions.length && (
+              <div className="app-empty-state mb-4 p-5">
+                Belum ada jadwal produksi. Isi `take_date` atau `post_date` di production board.
               </div>
-            ))}
-            {gridDays.map((day) => {
-              const key = formatDateKey(day)
-              const items =
-                (itemsByDate.get(key) ?? []).filter(
-                  (item) => (showTake && item.type === 'take') || (showPost && item.type === 'post')
-                )
-              const inCurrentMonth = day.getMonth() === currentMonth.getMonth()
-              const visibleItems = items.slice(0, 3)
-              const isToday = isSameDate(day, new Date())
-
-              return (
+            )}
+            <div className="grid grid-cols-7 gap-2">
+              {weekDays.map((day) => (
                 <div
-                  key={key}
-                  className={`min-h-28 rounded-xl border p-2 transition-colors ${
-                    inCurrentMonth
-                      ? 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'
-                      : 'border-slate-100 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-500'
-                  }`}
+                  key={day}
+                  className="rounded-lg bg-slate-50 px-2 py-1 text-center text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                 >
-                  <p
-                    className={`mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
-                      isToday ? 'bg-brand-600 text-white' : 'text-slate-500'
+                  {day}
+                </div>
+              ))}
+              {gridDays.map((day) => {
+                const key = formatDateKey(day)
+                const items =
+                  (itemsByDate.get(key) ?? []).filter(
+                    (item) => (showTake && item.type === 'take') || (showPost && item.type === 'post')
+                  )
+                const inCurrentMonth = day.getMonth() === currentMonth.getMonth()
+                const visibleItems = items.slice(0, 3)
+                const isToday = isSameDate(day, new Date())
+
+                return (
+                  <div
+                    key={key}
+                    className={`min-h-28 rounded-xl border p-2 transition-colors ${
+                      inCurrentMonth
+                        ? 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'
+                        : 'border-slate-100 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-500'
                     }`}
                   >
-                    {day.getDate()}
-                  </p>
-                  <div className="space-y-1">
-                    {visibleItems.map((item, idx) => (
-                      <button
-                        key={`${item.production.id}-${item.type}-${idx}`}
-                        onClick={() => openDrawer(item.production)}
-                        className={`w-full truncate rounded-full px-2 py-1 text-left text-[11px] font-medium transition-colors hover:opacity-90 ${
-                          item.type === 'take'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-emerald-100 text-emerald-800'
-                        }`}
-                      >
-                        {item.type === 'take' ? 'Take' : 'Post'}: {item.production.title}
-                      </button>
-                    ))}
-                    {items.length > 3 && (
-                      <p className="text-[11px] text-slate-500">+{items.length - 3} lainnya</p>
-                    )}
+                    <p
+                      className={`mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+                        isToday ? 'bg-brand-600 text-white' : 'text-slate-500'
+                      }`}
+                    >
+                      {day.getDate()}
+                    </p>
+                    <div className="space-y-1">
+                      {visibleItems.map((item, idx) => (
+                        <button
+                          key={`${item.production.id}-${item.type}-${idx}`}
+                          onClick={() => selectProduction(item.production)}
+                          className={`w-full truncate rounded-full px-2 py-1 text-left text-[11px] font-medium transition-colors hover:opacity-90 ${
+                            item.type === 'take'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-emerald-100 text-emerald-800'
+                          }`}
+                        >
+                          {item.type === 'take' ? 'Take' : 'Post'}: {item.production.title}
+                        </button>
+                      ))}
+                      {items.length > 3 && (
+                        <p className="text-[11px] text-slate-500">+{items.length - 3} lainnya</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
+
+          <aside className="workspace-inspector hidden xl:block">
+            <div className="app-card h-full overflow-y-auto p-4">
+              {selectedProduction ? (
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      {selectedProduction.title}
+                    </h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {selectedProduction.clients?.name ?? '-'}
+                    </p>
+                  </div>
+                  <ProductionDetailView
+                    production={selectedProduction}
+                    activeTab="SCHEDULE"
+                    onGenerateClientLink={async () => {}}
+                  />
+                  <button onClick={() => setDrawerOpen(true)} className="app-button-primary w-full">
+                    Edit Schedule
+                  </button>
+                </div>
+              ) : (
+                <div className="app-empty-state flex h-full items-center justify-center py-12">
+                  Pilih event pada kalender untuk melihat detail.
+                </div>
+              )}
+            </div>
+          </aside>
         </div>
       )}
 

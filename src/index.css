@@ -74,6 +74,26 @@
   .app-skeleton {
     @apply animate-pulse rounded-xl border border-slate-200 bg-slate-200/70 dark:border-slate-800 dark:bg-slate-800/70;
   }
+
+  .workspace-shell {
+    @apply relative;
+  }
+
+  .workspace-header {
+    @apply border border-slate-200/70 dark:border-slate-800/80;
+  }
+
+  .workspace-grid {
+    @apply grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_360px];
+  }
+
+  .workspace-canvas {
+    @apply min-h-[64vh];
+  }
+
+  .workspace-inspector {
+    @apply min-h-[64vh];
+  }
 }
 
 @layer utilities {
