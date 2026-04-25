@@ -1,4 +1,6 @@
 import { NavLink } from 'react-router-dom'
+import { can } from '../../features/auth/permissions'
+import { useAuth } from '../../features/auth/useAuth'
 
 const navItems = [
   { label: 'Dashboard', path: '/' },
@@ -7,9 +9,14 @@ const navItems = [
   { label: 'Productions', path: '/productions' },
   { label: 'Calendar', path: '/calendar' },
   { label: 'Activity Log', path: '/activity-log' },
+  { label: 'User Management', path: '/users', adminOnly: true },
 ]
 
 export function Sidebar() {
+  const { user } = useAuth()
+  const canManageUsers = can(user, 'users.manage')
+  const visibleItems = navItems.filter((item) => !item.adminOnly || canManageUsers)
+
   return (
     <aside className="hidden w-72 border-r border-slate-200/80 bg-white/90 p-5 backdrop-blur dark:border-slate-800 dark:bg-slate-900/85 md:block">
       <div className="app-card mb-7 p-4">
@@ -20,7 +27,7 @@ export function Sidebar() {
       </div>
 
       <nav className="space-y-1.5">
-        {navItems.map((item) => (
+        {visibleItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}

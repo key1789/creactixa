@@ -21,6 +21,9 @@ const CalendarPage = lazy(() =>
 const ActivityLogPage = lazy(() =>
   import('./pages/ActivityLogPage').then((module) => ({ default: module.ActivityLogPage }))
 )
+const UserManagementPage = lazy(() =>
+  import('./pages/UserManagementPage').then((module) => ({ default: module.UserManagementPage }))
+)
 const ClientViewPage = lazy(() =>
   import('./pages/ClientViewPage').then((module) => ({ default: module.ClientViewPage }))
 )
@@ -46,6 +49,7 @@ function App() {
             <Route path="productions" element={<ProductionsPage />} />
             <Route path="calendar" element={<CalendarPage />} />
             <Route path="activity-log" element={<ActivityLogPage />} />
+            <Route path="users" element={<UserManagementPage />} />
           </Route>
           <Route path="login" element={<LoginPage />} />
           <Route path="view/:id" element={<ClientViewPage />} />

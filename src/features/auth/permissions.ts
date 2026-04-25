@@ -10,6 +10,7 @@ export type PermissionAction =
   | 'ideas.approve'
   | 'productions.edit'
   | 'productions.drag'
+  | 'users.manage'
 
 const ROLE_PERMISSIONS: Record<UserRole, PermissionAction[]> = {
   admin: [
@@ -21,6 +22,7 @@ const ROLE_PERMISSIONS: Record<UserRole, PermissionAction[]> = {
     'ideas.approve',
     'productions.edit',
     'productions.drag',
+    'users.manage',
   ],
   planner: ['clients.create', 'clients.edit', 'ideas.create', 'ideas.edit', 'ideas.approve'],
   production: ['productions.edit', 'productions.drag'],
